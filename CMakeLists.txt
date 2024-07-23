@@ -6,9 +6,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
-SET(NODEJS_URL "https://atom.io/download/atom-shell" CACHE STRING "Node.JS URL")
+SET(NODEJS_URL "https://artifacts.electronjs.org/headers/dist" CACHE STRING "Node.JS URL")
 SET(NODEJS_NAME "iojs" CACHE STRING "Node.JS Name")
-SET(NODEJS_VERSION "v13.4.0" CACHE STRING "Node.JS Version")
+SET(NODEJS_VERSION "v29.4.3" CACHE STRING "Node.JS Version")
 
 include(NodeJS)
 
@@ -64,16 +64,26 @@ endforeach()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE -DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS)
 
+include(FetchContent)
+
 # Compare current linked libs with prev
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_dependencies.cmd $<TARGET_FILE:game_overlay> ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}
+FetchContent_Declare(
+	deps_checker
+	URL "https://raw.githubusercontent.com/stream-labs/obs-studio-node/staging/dependency_checker/check_dependencies.cmd"
+	DOWNLOAD_NO_EXTRACT true
 )
+FetchContent_MakeAvailable(deps_checker)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD 
+	COMMAND ${deps_checker_SOURCE_DIR}/check_dependencies.cmd $<TARGET_FILE:game_overlay> ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} $<CONFIG>
+)
+
 
 SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 
 # Print all linked libs
-get_target_property(OUT ${PROJECT_NAME} LINK_LIBRARIES)
-message(STATUS ${OUT})
+get_target_property(LIST_OF_LIBRARIES ${PROJECT_NAME} LINK_LIBRARIES)
+message(STATUS "List of libraries to link with: " "${LIST_OF_LIBRARIES}")
 
 # Install
 install(FILES $<TARGET_PDB_FILE:game_overlay> DESTINATION ${CMAKE_INSTALL_PREFIX} OPTIONAL)
